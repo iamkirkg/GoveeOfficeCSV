@@ -67,6 +67,12 @@ Public Sub RunGoveeImport()
 
     WriteLogLine szLog, "Sensors loaded: " & dictSensors.Count
 
+    If dictTimes.Count > 0 And dictSensors.Count > 0 Then
+        WriteGoveeWorkbook folderPath, dateToken, arrTimes, dictSensors, szLog
+    Else
+        WriteLogLine szLog, "Workbook not written because no data was available."
+    End If
+
     Exit Sub
 
 FatalError:

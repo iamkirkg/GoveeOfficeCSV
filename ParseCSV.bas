@@ -151,7 +151,7 @@ Public Sub LogGlobalTimeRange(ByRef dictTimes As Object, ByVal szLog As String)
     WriteLogLine szLog, "Global range: first=" & sortedKeys(LBound(sortedKeys)) & ", last=" & sortedKeys(UBound(sortedKeys))
 End Sub
 
-Private Function VariantKeysToStringArray(ByVal keys As Variant) As String()
+Public Function VariantKeysToStringArray(ByVal keys As Variant) As String()
     Dim arr() As String
     Dim i As Long
     
@@ -164,7 +164,7 @@ Private Function VariantKeysToStringArray(ByVal keys As Variant) As String()
     VariantKeysToStringArray = arr
 End Function
 
-Private Sub SortStringArray(ByRef arr() As String)
+Public Sub SortStringArray(ByRef arr() As String)
     Dim i As Long
     Dim j As Long
     Dim temp As String
