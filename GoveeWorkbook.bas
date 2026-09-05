@@ -1,6 +1,18 @@
 Attribute VB_Name = "GoveeWorkbook"
 Option Explicit
 
+Public Sub CloseWorkbookIfOpen(ByVal fullPath As String, ByVal szLog As String)
+    Dim wb As Excel.Workbook
+
+    For Each wb In Application.Workbooks
+        If StrComp(wb.FullName, fullPath, vbTextCompare) = 0 Then
+            WriteLogLine szLog, "Closing already-open workbook: " & fullPath
+            wb.Close SaveChanges:=False
+            Exit For
+        End If
+    Next wb
+End Sub
+
 Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As String, ByRef arrTimes() As String, ByRef dictSensors As Object, ByVal szLog As String)
     Dim wb As Workbook
     Dim ws As Worksheet
@@ -17,6 +29,8 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
     
     outputPath = folderPath & "\Govee" & dateToken & ".xlsx"
     
+    CloseWorkbookIfOpen outputPath, szLog
+
     Set wb = Application.Workbooks.Add
     Set ws = wb.Worksheets(1)
     ws.Name = "Data"
@@ -61,10 +75,13 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
     Application.DisplayAlerts = True
-    
+
     WriteLogLine szLog, "Saved workbook: " & outputPath
     wb.Close SaveChanges:=False
-    
+
+    Set ws = Nothing
+    Set wb = Nothing
+
     Exit Sub
 
 WriteError:
@@ -73,6 +90,8 @@ WriteError:
     If Not wb Is Nothing Then
         wb.Close SaveChanges:=False
     End If
+    Set ws = Nothing
+    Set wb = Nothing
     On Error GoTo 0
     
     WriteLogLine szLog, "WRITE ERROR: " & Err.Number & " - " & Err.Description
