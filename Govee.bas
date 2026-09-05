@@ -1,61 +1,65 @@
 Attribute VB_Name = "Govee"
-Sub HelloGovee()
-    MsgBox "Module is working"
-End Sub
+' Alt-F11 opens VBA
 
 Option Explicit
 
-' Public gLogPath As String
+' Public szLog As String
 
 Public Sub RunGoveeImport()
     Dim folderPath As String
     Dim dateToken As String
-    Dim gLogPath As String
-    Dim fileName As String
+    Dim szLog As String
+    Dim szFile As String
     Dim fullPath As String
     Dim sensorNum As Long
+    Dim dictTimes As Object
     Dim matchedCount As Long
     
     On Error GoTo FatalError
     
     folderPath = GetGoveeFolder()
     dateToken = Format(Date - 1, "yyyymmdd")
-    gLogPath = folderPath & "\Govee" & dateToken & ".txt"
+    szLog = folderPath & "\Govee" & dateToken & ".txt"
     
-    InitializeLog gLogPath
-    WriteLogLine gLogPath, "START"
-    WriteLogLine gLogPath, "Folder: " & folderPath
-    WriteLogLine gLogPath, "Date token: " & dateToken
+    Set dictTimes = CreateObject("Scripting.Dictionary")
     
-    fileName = Dir(folderPath & "\*" & dateToken & "*.csv")
+    InitializeLog szLog
+    WriteLogLine szLog, "START"
+    WriteLogLine szLog, "Folder: " & folderPath
+    WriteLogLine szLog, "Date token: " & dateToken
     
-    If fileName = "" Then
-        WriteLogLine gLogPath, "No CSV files found."
+    szFile = Dir(folderPath & "\*" & dateToken & "*.csv")
+    
+    If szFile = "" Then
+        WriteLogLine szLog, "No CSV files found."
     End If
     
-    Do While fileName <> ""
-        fullPath = folderPath & "\" & fileName
-        WriteLogLine gLogPath, "Found: " & fileName
+    Do While szFile <> ""
+        fullPath = folderPath & "\" & szFile
+        WriteLogLine szLog, "Found: " & szFile
         
-        If TryMatchGoveeFile(fileName, dateToken, sensorNum) Then
+        If TryMatchGoveeFile(szFile, dateToken, sensorNum) Then
             matchedCount = matchedCount + 1
-            WriteLogLine gLogPath, "Accepted: sensor " & Format(sensorNum, "00") & " -> " & fileName
+            WriteLogLine szLog, "Accepted: sensor " & Format(sensorNum, "00") & " -> " & szFile
+            ParseOneCsvFile folderPath & "\" & szFile, sensorNum, dictTimes, szLog
         Else
-            WriteLogLine gLogPath, "Skipped: " & fileName
+            WriteLogLine szLog, "Skipped: " & szFile
         End If
         
-        fileName = Dir()
+        szFile = Dir()
     Loop
     
-    WriteLogLine gLogPath, "Matched files: " & matchedCount
-    WriteLogLine gLogPath, "END"
+    WriteLogLine szLog, "Matched files: " & matchedCount
+    WriteLogLine szLog, "Distinct timestamps across all files: " & dictTimes.Count
     
-    MsgBox "Scan complete. Log written to:" & vbCrLf & gLogPath, vbInformation
-    
+    If dictTimes.Count > 0 Then
+        LogGlobalTimeRange dictTimes, szLog
+    End If
+
     Exit Sub
 
 FatalError:
-    WriteLogLine gLogPath, "FATAL ERROR: " & Err.Number & " - " & Err.Description
+    WriteLogLine szLog, "FATAL ERROR: " & Err.Number & " - " & Err.Description
     MsgBox "Error: " & Err.Description, vbExclamation
 End Sub
 
@@ -78,7 +82,7 @@ Private Function GetGoveeFolder() As String
     GetGoveeFolder = folderPath
 End Function
 
-Private Function TryMatchGoveeFile(ByVal fileName As String, ByVal dateToken As String, ByRef sensorNum As Long) As Boolean
+Private Function TryMatchGoveeFile(ByVal szFile As String, ByVal dateToken As String, ByRef sensorNum As Long) As Boolean
     Dim re As Object
     Dim matches As Object
     Dim sensorText As String
@@ -90,12 +94,12 @@ Private Function TryMatchGoveeFile(ByVal fileName As String, ByVal dateToken As 
     re.IgnoreCase = True
     re.Global = False
     
-    If Not re.Test(fileName) Then
+    If Not re.Test(szFile) Then
         TryMatchGoveeFile = False
         Exit Function
     End If
     
-    Set matches = re.Execute(fileName)
+    Set matches = re.Execute(szFile)
     
     sensorText = matches(0).SubMatches(0)
     dateText = matches(0).SubMatches(1)
@@ -120,15 +124,6 @@ Private Sub InitializeLog(argLog As String)
     fileNum = FreeFile
     Open argLog For Output As #fileNum
     Print #fileNum, "Govee import log"
-    Close #fileNum
-End Sub
-
-Private Sub WriteLogLine(argLog As String, ByVal message As String)
-    Dim fileNum As Integer
-    
-    fileNum = FreeFile
-    Open argLog For Append As #fileNum
-    Print #fileNum, Format(Now, "yyyy-mm-dd hh:nn:ss"); "  "; message
     Close #fileNum
 End Sub
 
