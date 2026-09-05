@@ -13,6 +13,7 @@ Public Sub RunGoveeImport()
     Dim fullPath As String
     Dim sensorNum As Long
     Dim dictTimes As Object
+    Dim dictSensors As Object
     Dim matchedCount As Long
     Dim arrTimes() As String
     
@@ -23,6 +24,7 @@ Public Sub RunGoveeImport()
     szLog = folderPath & "\Govee" & dateToken & ".txt"
     
     Set dictTimes = CreateObject("Scripting.Dictionary")
+    Set dictSensors = CreateObject("Scripting.Dictionary")
     
     InitializeLog szLog
     WriteLogLine szLog, "START"
@@ -42,7 +44,7 @@ Public Sub RunGoveeImport()
         If TryMatchGoveeFile(szFile, dateToken, sensorNum) Then
             matchedCount = matchedCount + 1
             WriteLogLine szLog, "Accepted: sensor " & Format(sensorNum, "00") & " -> " & szFile
-            ParseOneCsvFile fullPath, sensorNum, dictTimes, szLog
+            ParseOneCsvFile fullPath, sensorNum, dictTimes, dictSensors, szLog
         Else
             WriteLogLine szLog, "Skipped: " & szFile
         End If
@@ -62,6 +64,8 @@ Public Sub RunGoveeImport()
         WriteLogLine szLog, "Master first timestamp: " & arrTimes(LBound(arrTimes))
         WriteLogLine szLog, "Master last timestamp: " & arrTimes(UBound(arrTimes))
     End If
+
+    WriteLogLine szLog, "Sensors loaded: " & dictSensors.Count
 
     Exit Sub
 

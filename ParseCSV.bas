@@ -1,7 +1,9 @@
 Attribute VB_Name = "ParseCSV"
 Option Explicit
 
-Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, ByRef dictTimes As Object, ByVal szLog As String)
+' dictSensors("07")("2026-09-03 08:11:00") = Array("75.38", "56.4")
+
+Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, ByRef dictTimes As Object, ByRef dictSensors As Object, ByVal szLog As String)
     Dim fileNum As Integer
     Dim lineText As String
     Dim lineNumber As Long
@@ -19,14 +21,21 @@ Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, By
     Dim sensorTimes As Object
     Dim firstTimestamp As String
     Dim lastTimestamp As String
-    Dim priorValue As String
-    Dim thisValue As String
+    Dim priorValue As Variant
+    Dim sensorKey As String
     
     On Error GoTo FileError
     
-    Set sensorTimes = CreateObject("Scripting.Dictionary")
+    sensorKey = Format(sensorNum, "00")
+
+    If dictSensors.Exists(sensorKey) Then
+        Set sensorTimes = dictSensors(sensorKey)
+    Else
+        Set sensorTimes = CreateObject("Scripting.Dictionary")
+        dictSensors.Add sensorKey, sensorTimes
+    End If
     
-    WriteLogLine szLog, "Parsing sensor " & Format(sensorNum, "00") & ": " & filePath
+    WriteLogLine szLog, "Parsing sensor " & sensorKey & ": " & filePath
     
     fileNum = FreeFile
     Open filePath For Input As #fileNum
@@ -36,7 +45,7 @@ Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, By
         lineNumber = lineNumber + 1
         
         If lineNumber = 1 Then
-            WriteLogLine szLog, "Header sensor " & Format(sensorNum, "00") & ": " & lineText
+            WriteLogLine szLog, "Header sensor " & sensorKey & ": " & lineText
         Else
             rowCount = rowCount + 1
             
@@ -44,7 +53,7 @@ Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, By
             
             If UBound(parts) < 2 Then
                 malformedCount = malformedCount + 1
-                WriteLogLine szLog, "Malformed row, sensor " & Format(sensorNum, "00") & ", line " & lineNumber & ": " & lineText
+                WriteLogLine szLog, "Malformed row, sensor " & sensorKey & ", line " & lineNumber & ": " & lineText
                 GoTo NextLine
             End If
             
@@ -54,34 +63,33 @@ Public Sub ParseOneCsvFile(ByVal filePath As String, ByVal sensorNum As Long, By
             
             If Len(timestamp) = 0 Then
                 blankTimestampCount = blankTimestampCount + 1
-                WriteLogLine szLog, "Blank timestamp, sensor " & Format(sensorNum, "00") & ", line " & lineNumber
+                WriteLogLine szLog, "Blank timestamp, sensor " & sensorKey & ", line " & lineNumber
                 GoTo NextLine
             End If
             
             If Not IsNumeric(tempText) Or Not IsNumeric(humidityText) Then
                 nonNumericCount = nonNumericCount + 1
-                WriteLogLine szLog, "Non-numeric value, sensor " & Format(sensorNum, "00") & ", line " & lineNumber & ": " & lineText
+                WriteLogLine szLog, "Non-numeric value, sensor " & sensorKey & ", line " & lineNumber & ": " & lineText
             End If
             
             If Not dictTimes.Exists(timestamp) Then
                 dictTimes.Add timestamp, True
             End If
             
-            thisValue = tempText & "|" & humidityText
-            
             If sensorTimes.Exists(timestamp) Then
                 duplicateCount = duplicateCount + 1
-                priorValue = CStr(sensorTimes(timestamp))
+                priorValue = sensorTimes(timestamp)
                 
-                If priorValue <> thisValue Then
+                If CStr(priorValue(0)) <> tempText Or CStr(priorValue(1)) <> humidityText Then
                     differingDuplicateCount = differingDuplicateCount + 1
-                    WriteLogLine szLog, "Duplicate timestamp with different values, sensor " & Format(sensorNum, "00") & ", time " & timestamp & _
-                        ", prior=" & priorValue & ", new=" & thisValue
+                    WriteLogLine szLog, "Duplicate timestamp with different values, sensor " & sensorKey & ", time " & timestamp & _
+                        ", prior=" & CStr(priorValue(0)) & "|" & CStr(priorValue(1)) & _
+                        ", new=" & tempText & "|" & humidityText
                 Else
-                    WriteLogLine szLog, "Duplicate timestamp with same values, sensor " & Format(sensorNum, "00") & ", time " & timestamp
+                    WriteLogLine szLog, "Duplicate timestamp with same values, sensor " & sensorKey & ", time " & timestamp
                 End If
             Else
-                sensorTimes.Add timestamp, thisValue
+                sensorTimes.Add timestamp, Array(tempText, humidityText)
                 dataRowCount = dataRowCount + 1
                 
                 If Len(firstTimestamp) = 0 Then
@@ -96,7 +104,7 @@ NextLine:
     
     Close #fileNum
     
-    WriteLogLine szLog, "Summary sensor " & Format(sensorNum, "00") & _
+    WriteLogLine szLog, "Summary sensor " & sensorKey & _
         ": rows=" & rowCount & _
         ", distinctTimes=" & sensorTimes.Count & _
         ", duplicates=" & duplicateCount & _
@@ -106,9 +114,9 @@ NextLine:
         ", nonNumeric=" & nonNumericCount
     
     If sensorTimes.Count > 0 Then
-        WriteLogLine szLog, "Range sensor " & Format(sensorNum, "00") & ": first=" & firstTimestamp & ", last=" & lastTimestamp
+        WriteLogLine szLog, "Range sensor " & sensorKey & ": first=" & firstTimestamp & ", last=" & lastTimestamp
     Else
-        WriteLogLine szLog, "Range sensor " & Format(sensorNum, "00") & ": no valid data rows"
+        WriteLogLine szLog, "Range sensor " & sensorKey & ": no valid data rows"
     End If
     
     Exit Sub
@@ -118,6 +126,7 @@ FileError:
     Close #fileNum
     On Error GoTo 0
     WriteLogLine szLog, "FILE ERROR sensor " & Format(sensorNum, "00") & ": " & Err.Number & " - " & Err.Description & " [" & filePath & "]"
+
 End Sub
 
 Public Function GetSortedTimeArray(ByRef dictTimes As Object) As String()
