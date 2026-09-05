@@ -14,6 +14,7 @@ Public Sub RunGoveeImport()
     Dim sensorNum As Long
     Dim dictTimes As Object
     Dim matchedCount As Long
+    Dim arrTimes() As String
     
     On Error GoTo FatalError
     
@@ -41,7 +42,7 @@ Public Sub RunGoveeImport()
         If TryMatchGoveeFile(szFile, dateToken, sensorNum) Then
             matchedCount = matchedCount + 1
             WriteLogLine szLog, "Accepted: sensor " & Format(sensorNum, "00") & " -> " & szFile
-            ParseOneCsvFile folderPath & "\" & szFile, sensorNum, dictTimes, szLog
+            ParseOneCsvFile fullPath, sensorNum, dictTimes, szLog
         Else
             WriteLogLine szLog, "Skipped: " & szFile
         End If
@@ -53,7 +54,13 @@ Public Sub RunGoveeImport()
     WriteLogLine szLog, "Distinct timestamps across all files: " & dictTimes.Count
     
     If dictTimes.Count > 0 Then
+        arrTimes = GetSortedTimeArray(dictTimes)
+
         LogGlobalTimeRange dictTimes, szLog
+
+        WriteLogLine szLog, "Master timestamp rows: " & (UBound(arrTimes) - LBound(arrTimes) + 1)
+        WriteLogLine szLog, "Master first timestamp: " & arrTimes(LBound(arrTimes))
+        WriteLogLine szLog, "Master last timestamp: " & arrTimes(UBound(arrTimes))
     End If
 
     Exit Sub

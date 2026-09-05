@@ -120,6 +120,17 @@ FileError:
     WriteLogLine szLog, "FILE ERROR sensor " & Format(sensorNum, "00") & ": " & Err.Number & " - " & Err.Description & " [" & filePath & "]"
 End Sub
 
+Public Function GetSortedTimeArray(ByRef dictTimes As Object) As String()
+    Dim keys As Variant
+    Dim sortedKeys() As String
+
+    keys = dictTimes.keys
+    sortedKeys = VariantKeysToStringArray(keys)
+    SortStringArray sortedKeys
+
+    GetSortedTimeArray = sortedKeys
+End Function
+
 Public Sub LogGlobalTimeRange(ByRef dictTimes As Object, ByVal szLog As String)
     Dim keys As Variant
     Dim sortedKeys() As String
