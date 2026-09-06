@@ -69,9 +69,13 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
         
         colIndex = colIndex + 2
     Next i
-    
+
+    ws.Activate
+    ws.Range("B2").Select
+    ActiveWindow.FreezePanes = True
+
     ws.Columns.AutoFit
-    
+
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
     Application.DisplayAlerts = True
