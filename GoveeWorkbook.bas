@@ -76,6 +76,8 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
 
     ws.Columns.AutoFit
 
+    AddTemperatureChart ws, dateToken, szLog
+
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
     Application.DisplayAlerts = True
@@ -102,6 +104,12 @@ WriteError:
     MsgBox "Workbook write error: " & Err.Description, vbExclamation
 End Sub
 
+Private Function DateTokenToDate(ByVal dateToken As String) As Date
+    DateTokenToDate = DateSerial(CInt(Left$(dateToken, 4)), _
+                                 CInt(Mid$(dateToken, 5, 2)), _
+                                 CInt(Right$(dateToken, 2)))
+End Function
+
 Public Function GetSortedSensorKeys(ByRef dictSensors As Object) As String()
     Dim keys As Variant
     Dim arr() As String
@@ -113,4 +121,61 @@ Public Function GetSortedSensorKeys(ByRef dictSensors As Object) As String()
     GetSortedSensorKeys = arr
 End Function
 
+Private Sub AddTemperatureChart(ByVal ws As Worksheet, ByVal dateToken As String, ByVal szLog As String)
+    Dim chartObj As ChartObject
+    Dim ch As Chart
+    Dim lastRow As Long
+    Dim colTime As Long
+    Dim tempCols As Variant
+    Dim tempNames As Variant
+    Dim i As Long
+
+    Dim targetDate As Date
+    targetDate = DateTokenToDate(dateToken)
+    'WriteLogLine szLog, "dateToken = " & dateToken & ", targetDate = " & targetDate
+
+    colTime = 1
+    '               #1 #12 #17 #19 #18 #10 #3
+    tempCols = Array(2, 22, 30, 34, 32, 18, 4)
+    tempNames = Array("Boiler", "In", "Dump", "Feed", "Handler", "Vent", "Sensor")
+
+    lastRow = ws.Cells(ws.Rows.Count, colTime).End(xlUp).Row
+
+    Set chartObj = ws.ChartObjects.Add(Left:=500, Top:=20, Width:=900, Height:=450)
+    Set ch = chartObj.Chart
+
+    ch.ChartType = xlXYScatterSmooth
+
+    Do While ch.SeriesCollection.Count > 0
+        ch.SeriesCollection(1).Delete
+    Loop
+
+    For i = LBound(tempCols) To UBound(tempCols)
+        With ch.SeriesCollection.NewSeries
+            .Name = tempNames(i)
+            .XValues = ws.Range(ws.Cells(2, colTime), ws.Cells(lastRow, colTime))
+            .Values = ws.Range(ws.Cells(2, tempCols(i)), ws.Cells(lastRow, tempCols(i)))
+            .MarkerStyle = xlMarkerStyleNone
+            .Format.Line.Weight = 2
+        End With
+    Next i
+
+    ch.Axes(xlCategory).MinimumScale = CDbl(targetDate)
+    ch.Axes(xlCategory).MaximumScale = CDbl(targetDate + 1)
+    ch.Axes(xlCategory).TickLabels.NumberFormat = "m/d h:mm"
+
+    ch.Axes(xlValue).MinimumScale = 50
+    ch.Axes(xlValue).MaximumScale = 130
+
+    ch.HasTitle = True
+    ch.ChartTitle.Text = "Main House Sensors : " & targetDate
+
+    ch.Axes(xlCategory).HasTitle = True
+    ch.Axes(xlCategory).AxisTitle.Text = "TimeStamp"
+
+    ch.Axes(xlValue).HasTitle = True
+    ch.Axes(xlValue).AxisTitle.Text = "Temperature (F)"
+
+    WriteLogLine szLog, "Added chart: Selected Temperature Sensors"
+End Sub
 
