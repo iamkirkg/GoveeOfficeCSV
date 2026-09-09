@@ -14,6 +14,21 @@ SafeExit:
 End Sub
 
 Private Sub Workbook_Open()
+    On Error GoTo CleanFail
+
     RunGoveeImport
+
+    If Len(Dir(GetGoveeFolder() & "\debug.txt")) > 0 Then
+        Application.VBE.MainWindow.Visible = True
+    Else
+        Application.DisplayAlerts = False
+        Application.Quit
+    End If
+
+    Exit Sub
+
+CleanFail:
+    Application.DisplayAlerts = True
+    MsgBox "Workbook_Open failed: " & Err.Description, vbExclamation
 End Sub
 

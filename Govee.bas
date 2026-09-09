@@ -10,6 +10,7 @@ Public Sub RunGoveeImport()
     Dim dateToken As String
     Dim szLog As String
     Dim szFile As String
+    Dim fileXlsx As String
     Dim fullPath As String
     Dim sensorNum As Long
     Dim dictTimes As Object
@@ -21,8 +22,15 @@ Public Sub RunGoveeImport()
     
     folderPath = GetGoveeFolder()
     dateToken = Format(Date - 1, "yyyymmdd")
+
+    ' If our target XLS already exists, bail.
+    fileXlsx = folderPath & "\Govee" & dateToken & ".xlsx"
+    If Len(Dir(fileXlsx)) > 0 Then
+        Exit Sub
+    End If
+
     szLog = folderPath & "\Govee" & dateToken & ".txt"
-    
+
     Set dictTimes = CreateObject("Scripting.Dictionary")
     Set dictSensors = CreateObject("Scripting.Dictionary")
     
@@ -80,7 +88,7 @@ FatalError:
     MsgBox "Error: " & Err.Description, vbExclamation
 End Sub
 
-Private Function GetGoveeFolder() As String
+Public Function GetGoveeFolder() As String
     Dim oneDrivePath As String
     Dim folderPath As String
     
