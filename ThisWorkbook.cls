@@ -16,7 +16,7 @@ End Sub
 Private Sub Workbook_Open()
     On Error GoTo CleanFail
 
-    RunGoveeImport
+    ProcessRequestedDates
 
     If Len(Dir(GetGoveeFolder() & "\debug.txt")) > 0 Then
         Application.VBE.MainWindow.Visible = True

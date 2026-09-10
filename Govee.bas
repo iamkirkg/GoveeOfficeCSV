@@ -5,9 +5,64 @@ Option Explicit
 
 ' Public szLog As String
 
-Public Sub RunGoveeImport()
+Public Sub ProcessRequestedDates()
     Dim folderPath As String
+    Dim szFile As String
+    Dim re As Object
+    Dim matches As Object
     Dim dateToken As String
+    Dim dictDates As Object
+    Dim arrDates() As String
+    Dim i As Long
+
+    folderPath = GetGoveeFolder()
+    Set dictDates = CreateObject("Scripting.Dictionary")
+    Set re = CreateObject("VBScript.RegExp")
+
+    re.Pattern = "^Generate([0-9]{8})\.txt$"
+    re.IgnoreCase = True
+    re.Global = False
+
+    szFile = Dir(folderPath & "\Generate*.txt")
+
+    Do While szFile <> ""
+        If re.Test(szFile) Then
+            Set matches = re.Execute(szFile)
+            dateToken = matches(0).SubMatches(0)
+
+            If Not dictDates.Exists(dateToken) Then
+                dictDates.Add dateToken, szFile
+            End If
+        End If
+
+        szFile = Dir()
+    Loop
+
+    If dictDates.Count = 0 Then
+        Call RunGoveeImport
+        Exit Sub
+    End If
+
+    arrDates = VariantKeysToStringArray(dictDates.keys)
+    SortStringArray arrDates
+
+    For i = LBound(arrDates) To UBound(arrDates)
+        dateToken = arrDates(i)
+        If RunGoveeImport(dateToken) Then
+            DeleteTriggerFile folderPath & "\" & dictDates(dateToken)
+        End If
+
+    Next i
+End Sub
+
+Private Sub DeleteTriggerFile(ByVal filePath As String)
+    On Error Resume Next
+    Kill filePath
+    On Error GoTo 0
+End Sub
+
+Public Function RunGoveeImport(Optional ByVal dateToken As String = "") As Boolean
+    Dim folderPath As String
     Dim szLog As String
     Dim szFile As String
     Dim fileXlsx As String
@@ -17,38 +72,41 @@ Public Sub RunGoveeImport()
     Dim dictSensors As Object
     Dim matchedCount As Long
     Dim arrTimes() As String
-    
+
     On Error GoTo FatalError
-    
+
     folderPath = GetGoveeFolder()
-    dateToken = Format(Date - 1, "yyyymmdd")
+
+    If Len(dateToken) = 0 Then
+        dateToken = Format(Date - 1, "yyyymmdd")
+    End If
 
     ' If our target XLS already exists, bail.
     fileXlsx = folderPath & "\Govee" & dateToken & ".xlsx"
     If Len(Dir(fileXlsx)) > 0 Then
-        Exit Sub
+        Exit Function
     End If
 
     szLog = folderPath & "\Govee" & dateToken & ".txt"
 
     Set dictTimes = CreateObject("Scripting.Dictionary")
     Set dictSensors = CreateObject("Scripting.Dictionary")
-    
+
     InitializeLog szLog
     WriteLogLine szLog, "START"
     WriteLogLine szLog, "Folder: " & folderPath
     WriteLogLine szLog, "Date token: " & dateToken
-    
+
     szFile = Dir(folderPath & "\*" & dateToken & "*.csv")
-    
+
     If szFile = "" Then
         WriteLogLine szLog, "No CSV files found."
     End If
-    
+
     Do While szFile <> ""
         fullPath = folderPath & "\" & szFile
         WriteLogLine szLog, "Found: " & szFile
-        
+
         If TryMatchGoveeFile(szFile, dateToken, sensorNum) Then
             matchedCount = matchedCount + 1
             WriteLogLine szLog, "Accepted: sensor " & Format(sensorNum, "00") & " -> " & szFile
@@ -56,13 +114,13 @@ Public Sub RunGoveeImport()
         Else
             WriteLogLine szLog, "Skipped: " & szFile
         End If
-        
+
         szFile = Dir()
     Loop
-    
+
     WriteLogLine szLog, "Matched files: " & matchedCount
     WriteLogLine szLog, "Distinct timestamps across all files: " & dictTimes.Count
-    
+
     If dictTimes.Count > 0 Then
         arrTimes = GetSortedTimeArray(dictTimes)
 
@@ -81,12 +139,15 @@ Public Sub RunGoveeImport()
         WriteLogLine szLog, "Workbook not written because no data was available."
     End If
 
-    Exit Sub
+    RunGoveeImport = True
+    Exit Function
 
 FatalError:
+    RunGoveeImport = False
     WriteLogLine szLog, "FATAL ERROR: " & Err.Number & " - " & Err.Description
     MsgBox "Error: " & Err.Description, vbExclamation
-End Sub
+
+End Function
 
 Public Function GetGoveeFolder() As String
     Dim oneDrivePath As String
