@@ -16,7 +16,6 @@ End Sub
 Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As String, ByRef arrTimes() As String, ByRef dictSensors As Object, ByVal szLog As String)
     Dim wb As Workbook
     Dim wsData As Worksheet
-    Dim wsMainHouse As Worksheet
     Dim outputPath As String
     Dim sensorKeys() As String
     Dim sensorKey As String
@@ -35,8 +34,6 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
     Set wb = Application.Workbooks.Add
     Set wsData = wb.Worksheets(1)
     wsData.Name = "Data"
-    Set wsMainHouse = wb.Worksheets.Add(After:=wsData)
-    wsMainHouse.Name = "Main House"
     
     WriteLogLine szLog, "Writing workbook: " & outputPath
     
@@ -79,7 +76,23 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
 
     wsData.Columns.AutoFit
 
-    AddTemperatureChart wsData, wsMainHouse, dateToken, szLog
+    Dim mainHouseCols As Variant
+    Dim mainHouseNames As Variant
+    mainHouseCols = Array(2, 8, 22, 30, 34, 32, 18, 4)
+    mainHouseNames = Array("Boiler", "Blowoff", "In", "Dump", "Feed", "Handler", "Vent", "Wall")
+    Dim wsMainHouse As Worksheet
+    Set wsMainHouse = wb.Worksheets.Add(After:=wsData)
+    wsMainHouse.Name = "Main House"
+    AddTemperatureChart wsData, wsMainHouse, dateToken, mainHouseCols, mainHouseNames, "Main House Sensors", szLog
+
+    Dim poolCols As Variant
+    Dim poolNames As Variant
+    poolCols = Array(2, 8, 10, 20, 26)
+    poolNames = Array("Boiler", "Blowoff", "Vent", "Feed", "Dump")
+    Dim wsPool As Worksheet
+    Set wsPool = wb.Worksheets.Add(After:=wsMainHouse)
+    wsPool.Name = "Pool"
+    AddTemperatureChart wsData, wsPool, dateToken, poolCols, poolNames, "Pool Sensors", szLog
 
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
@@ -126,24 +139,17 @@ Public Function GetSortedSensorKeys(ByRef dictSensors As Object) As String()
     GetSortedSensorKeys = arr
 End Function
 
-Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Worksheet, ByVal dateToken As String, ByVal szLog As String)
+Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Worksheet, ByVal dateToken As String, ByVal tempCols As Variant, ByVal tempNames As Variant, ByVal chartTitle As String, ByVal szLog As String)
     Dim chartObj As ChartObject
     Dim ch As Chart
     Dim lastRow As Long
     Dim colTime As Long
-    Dim tempCols As Variant
-    Dim tempNames As Variant
     Dim i As Long
-
     Dim targetDate As Date
+
     targetDate = DateTokenToDate(dateToken)
-    'WriteLogLine szLog, "dateToken = " & dateToken & ", targetDate = " & targetDate
 
     colTime = 1
-    '               #1 #12 #17 #19 #18 #10 #3
-    tempCols = Array(2, 22, 30, 34, 32, 18, 4)
-    tempNames = Array("Boiler", "In", "Dump", "Feed", "Handler", "Vent", "Sensor")
-
     lastRow = wsData.Cells(wsData.Rows.Count, colTime).End(xlUp).Row
 
     Set chartObj = wsChart.ChartObjects.Add(Left:=0, Top:=0, Width:=900, Height:=450)
@@ -173,7 +179,7 @@ Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Work
     ch.Axes(xlValue).MaximumScale = 130
 
     ch.HasTitle = True
-    ch.ChartTitle.Text = "Main House Sensors : " & targetDate
+    ch.chartTitle.Text = chartTitle & " : " & targetDate
 
     ch.Axes(xlCategory).HasTitle = True
     ch.Axes(xlCategory).AxisTitle.Text = "TimeStamp"
@@ -181,6 +187,6 @@ Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Work
     ch.Axes(xlValue).HasTitle = True
     ch.Axes(xlValue).AxisTitle.Text = "Temperature (F)"
 
-    WriteLogLine szLog, "Added chart: Selected Temperature Sensors"
+    WriteLogLine szLog, "Added chart: " & chartTitle
 End Sub
 
