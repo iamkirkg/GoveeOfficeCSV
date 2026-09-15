@@ -15,7 +15,8 @@ End Sub
 
 Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As String, ByRef arrTimes() As String, ByRef dictSensors As Object, ByVal szLog As String)
     Dim wb As Workbook
-    Dim ws As Worksheet
+    Dim wsData As Worksheet
+    Dim wsMainHouse As Worksheet
     Dim outputPath As String
     Dim sensorKeys() As String
     Dim sensorKey As String
@@ -32,15 +33,17 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
     CloseWorkbookIfOpen outputPath, szLog
 
     Set wb = Application.Workbooks.Add
-    Set ws = wb.Worksheets(1)
-    ws.Name = "Data"
+    Set wsData = wb.Worksheets(1)
+    wsData.Name = "Data"
+    Set wsMainHouse = wb.Worksheets.Add(After:=wsData)
+    wsMainHouse.Name = "Main House"
     
     WriteLogLine szLog, "Writing workbook: " & outputPath
     
-    ws.Cells(1, 1).Value = "TimeStamp"
+    wsData.Cells(1, 1).Value = "TimeStamp"
     
     For i = LBound(arrTimes) To UBound(arrTimes)
-        ws.Cells(i - LBound(arrTimes) + 2, 1).Value = arrTimes(i)
+        wsData.Cells(i - LBound(arrTimes) + 2, 1).Value = arrTimes(i)
     Next i
     
     sensorKeys = GetSortedSensorKeys(dictSensors)
@@ -50,17 +53,17 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
         sensorKey = sensorKeys(i)
         Set sensorTimes = dictSensors(sensorKey)
         
-        ws.Cells(1, colIndex).Value = sensorKey & "Temp"
-        ws.Cells(1, colIndex + 1).Value = sensorKey & "Humidity"
+        wsData.Cells(1, colIndex).Value = sensorKey & "Temp"
+        wsData.Cells(1, colIndex + 1).Value = sensorKey & "Humidity"
         
         For rowIndex = LBound(arrTimes) To UBound(arrTimes)
             If sensorTimes.Exists(arrTimes(rowIndex)) Then
                 valuePair = sensorTimes(arrTimes(rowIndex))
-                ws.Cells(rowIndex - LBound(arrTimes) + 2, colIndex).Value = valuePair(0)
-                ws.Cells(rowIndex - LBound(arrTimes) + 2, colIndex + 1).Value = valuePair(1)
+                wsData.Cells(rowIndex - LBound(arrTimes) + 2, colIndex).Value = valuePair(0)
+                wsData.Cells(rowIndex - LBound(arrTimes) + 2, colIndex + 1).Value = valuePair(1)
             Else
-                ws.Cells(rowIndex - LBound(arrTimes) + 2, colIndex).Value = ""
-                ws.Cells(rowIndex - LBound(arrTimes) + 2, colIndex + 1).Value = ""
+                wsData.Cells(rowIndex - LBound(arrTimes) + 2, colIndex).Value = ""
+                wsData.Cells(rowIndex - LBound(arrTimes) + 2, colIndex + 1).Value = ""
             End If
         Next rowIndex
         
@@ -70,13 +73,13 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
         colIndex = colIndex + 2
     Next i
 
-    ws.Activate
-    ws.Range("B2").Select
+    wsData.Activate
+    wsData.Range("B2").Select
     ActiveWindow.FreezePanes = True
 
-    ws.Columns.AutoFit
+    wsData.Columns.AutoFit
 
-    AddTemperatureChart ws, dateToken, szLog
+    AddTemperatureChart wsData, wsMainHouse, dateToken, szLog
 
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
@@ -85,7 +88,8 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
     WriteLogLine szLog, "Saved workbook: " & outputPath
     wb.Close SaveChanges:=False
 
-    Set ws = Nothing
+    Set wsData = Nothing
+    Set wsMainHouse = Nothing
     Set wb = Nothing
 
     Exit Sub
@@ -96,7 +100,8 @@ WriteError:
     If Not wb Is Nothing Then
         wb.Close SaveChanges:=False
     End If
-    Set ws = Nothing
+    Set wsData = Nothing
+    Set wsMainHouse = Nothing
     Set wb = Nothing
     On Error GoTo 0
     
@@ -121,7 +126,7 @@ Public Function GetSortedSensorKeys(ByRef dictSensors As Object) As String()
     GetSortedSensorKeys = arr
 End Function
 
-Private Sub AddTemperatureChart(ByVal ws As Worksheet, ByVal dateToken As String, ByVal szLog As String)
+Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Worksheet, ByVal dateToken As String, ByVal szLog As String)
     Dim chartObj As ChartObject
     Dim ch As Chart
     Dim lastRow As Long
@@ -139,9 +144,9 @@ Private Sub AddTemperatureChart(ByVal ws As Worksheet, ByVal dateToken As String
     tempCols = Array(2, 22, 30, 34, 32, 18, 4)
     tempNames = Array("Boiler", "In", "Dump", "Feed", "Handler", "Vent", "Sensor")
 
-    lastRow = ws.Cells(ws.Rows.Count, colTime).End(xlUp).Row
+    lastRow = wsData.Cells(wsData.Rows.Count, colTime).End(xlUp).Row
 
-    Set chartObj = ws.ChartObjects.Add(Left:=500, Top:=20, Width:=900, Height:=450)
+    Set chartObj = wsChart.ChartObjects.Add(Left:=0, Top:=0, Width:=900, Height:=450)
     Set ch = chartObj.Chart
 
     ch.ChartType = xlXYScatterSmooth
@@ -153,8 +158,8 @@ Private Sub AddTemperatureChart(ByVal ws As Worksheet, ByVal dateToken As String
     For i = LBound(tempCols) To UBound(tempCols)
         With ch.SeriesCollection.NewSeries
             .Name = tempNames(i)
-            .XValues = ws.Range(ws.Cells(2, colTime), ws.Cells(lastRow, colTime))
-            .Values = ws.Range(ws.Cells(2, tempCols(i)), ws.Cells(lastRow, tempCols(i)))
+            .XValues = wsData.Range(wsData.Cells(2, colTime), wsData.Cells(lastRow, colTime))
+            .Values = wsData.Range(wsData.Cells(2, tempCols(i)), wsData.Cells(lastRow, tempCols(i)))
             .MarkerStyle = xlMarkerStyleNone
             .Format.Line.Weight = 2
         End With
