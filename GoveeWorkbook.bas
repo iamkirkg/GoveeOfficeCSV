@@ -78,7 +78,7 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
 
     Dim mainHouseCols As Variant
     Dim mainHouseNames As Variant
-    mainHouseCols = Array(2, 8, 22, 30, 34, 32, 18, 4)
+    mainHouseCols = Array(2, 10, 24, 32, 36, 34, 20, 6)
     mainHouseNames = Array("Boiler", "Blowoff", "In", "Dump", "Feed", "Handler", "Vent", "Wall")
     Dim wsMainHouse As Worksheet
     Set wsMainHouse = wb.Worksheets.Add(After:=wsData)
@@ -87,7 +87,7 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
 
     Dim poolCols As Variant
     Dim poolNames As Variant
-    poolCols = Array(2, 8, 10, 20, 26)
+    poolCols = Array(2, 10, 12, 22, 28)
     poolNames = Array("Boiler", "Blowoff", "Vent", "Feed", "Dump")
     Dim wsPool As Worksheet
     Set wsPool = wb.Worksheets.Add(After:=wsMainHouse)
