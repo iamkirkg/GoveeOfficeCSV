@@ -76,23 +76,19 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
 
     wsData.Columns.AutoFit
 
-    Dim mainHouseCols As Variant
-    Dim mainHouseNames As Variant
-    mainHouseCols = Array(2, 10, 24, 32, 36, 34, 20, 6)
-    mainHouseNames = Array("Boiler", "Blowoff", "In", "Dump", "Feed", "Handler", "Vent", "Wall")
     Dim wsMainHouse As Worksheet
     Set wsMainHouse = wb.Worksheets.Add(After:=wsData)
     wsMainHouse.Name = "Main House"
-    AddTemperatureChart wsData, wsMainHouse, dateToken, mainHouseCols, mainHouseNames, "Main House Sensors", szLog
+    AddChart wsData, wsMainHouse, dateToken, _
+        Array("Boiler", "Blowoff", "B1.input", "B1.dump", "B1.feed", "B1.handler", "B1.vent", "B1.wall"), _
+        "Main House Sensors", szLog
 
-    Dim poolCols As Variant
-    Dim poolNames As Variant
-    poolCols = Array(2, 10, 12, 22, 28)
-    poolNames = Array("Boiler", "Blowoff", "Vent", "Feed", "Dump")
     Dim wsPool As Worksheet
     Set wsPool = wb.Worksheets.Add(After:=wsMainHouse)
     wsPool.Name = "Pool"
-    AddTemperatureChart wsData, wsPool, dateToken, poolCols, poolNames, "Pool Sensors", szLog
+    AddChart wsData, wsPool, dateToken, _
+        Array("Boiler", "Blowoff", "Pool.vent", "Pool.feed", "Pool.dump"), _
+        "Pool Sensors", szLog
 
     Application.DisplayAlerts = False
     wb.SaveAs fileName:=outputPath, FileFormat:=xlOpenXMLWorkbook
@@ -139,36 +135,78 @@ Public Function GetSortedSensorKeys(ByRef dictSensors As Object) As String()
     GetSortedSensorKeys = arr
 End Function
 
-Private Sub AddTemperatureChart(ByVal wsData As Worksheet, ByVal wsChart As Worksheet, ByVal dateToken As String, ByVal tempCols As Variant, ByVal tempNames As Variant, ByVal chartTitle As String, ByVal szLog As String)
+Private Function FindHeaderColumn(ByVal ws As Worksheet, ByVal headerText As String) As Long
+    Dim lastCol As Long
+    Dim col As Long
+
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    For col = 1 To lastCol
+        If CStr(ws.Cells(1, col).Value) = headerText Then
+            FindHeaderColumn = col
+            Exit Function
+        End If
+    Next col
+
+    FindHeaderColumn = 0
+End Function
+
+Private Sub AddChart(ByVal wsData As Worksheet, ByVal wsChart As Worksheet, ByVal dateToken As String, _
+                     ByVal chartSensors As Variant, ByVal chartTitle As String, ByVal szLog As String)
     Dim chartObj As ChartObject
     Dim ch As Chart
-    Dim lastRow As Long
     Dim colTime As Long
-    Dim i As Long
+    Dim lastRow As Long
     Dim targetDate As Date
+    Dim i As Long
+    Dim label As String
+    Dim s As SensorDef
+    Dim colSeries As Long
 
     targetDate = DateTokenToDate(dateToken)
-
-    colTime = 1
+    colTime = FindHeaderColumn(wsData, "TimeStamp")
+    If colTime = 0 Then
+        WriteLogLine szLog, "Chart not added (no TimeStamp column): " & chartTitle
+        Exit Sub
+    End If
     lastRow = wsData.Cells(wsData.Rows.Count, colTime).End(xlUp).Row
 
     Set chartObj = wsChart.ChartObjects.Add(Left:=0, Top:=0, Width:=900, Height:=450)
     Set ch = chartObj.Chart
-
     ch.ChartType = xlXYScatterSmooth
 
     Do While ch.SeriesCollection.Count > 0
         ch.SeriesCollection(1).Delete
     Loop
 
-    For i = LBound(tempCols) To UBound(tempCols)
+    For i = LBound(chartSensors) To UBound(chartSensors)
+        label = CStr(chartSensors(i))
+
+        If Not HasSensor(label) Then
+            WriteLogLine szLog, "Chart " & chartTitle & ": unknown sensor '" & label & "' - skipped."
+            GoTo NextSensor
+        End If
+
+        s = GetSensor(label)
+        colSeries = FindHeaderColumn(wsData, s.govee & "Temp")
+
+        If colSeries = 0 Then
+            WriteLogLine szLog, "Chart " & chartTitle & ": no data for " & s.label & " (" & s.govee & "Temp) - skipped."
+            GoTo NextSensor
+        End If
+
         With ch.SeriesCollection.NewSeries
-            .Name = tempNames(i)
+            .Name = s.label
             .XValues = wsData.Range(wsData.Cells(2, colTime), wsData.Cells(lastRow, colTime))
-            .Values = wsData.Range(wsData.Cells(2, tempCols(i)), wsData.Cells(lastRow, tempCols(i)))
+            .Values = wsData.Range(wsData.Cells(2, colSeries), wsData.Cells(lastRow, colSeries))
             .MarkerStyle = xlMarkerStyleNone
-            .Format.Line.Weight = 2
+            .Format.Line.Weight = s.lineWeight
+            .Format.Line.ForeColor.RGB = s.lineColor
+            .Format.Line.DashStyle = s.lineDash
         End With
+
+        WriteLogLine szLog, "Chart " & chartTitle & ": added " & s.label & " (col " & colSeries & ")"
+NextSensor:
     Next i
 
     ch.Axes(xlCategory).MinimumScale = CDbl(targetDate)

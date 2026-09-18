@@ -77,6 +77,8 @@ Public Function RunGoveeImport(Optional ByVal dateToken As String = "") As Boole
 
     folderPath = GetGoveeFolder()
 
+    BuildSensorCatalog
+
     If Len(dateToken) = 0 Then
         dateToken = Format(Date - 1, "yyyymmdd")
     End If

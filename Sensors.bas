@@ -16,6 +16,16 @@ Private gCatalogReady As Boolean
 ' ---------------------------------------------------------------
 ' Build the catalog once per run.
 ' Call this at the start of RunGoveeImport (or ProcessRequestedDates).
+
+' msoLineSolid        ' solid
+' msoLineDash         ' dashed
+' msoLineDot          ' dotted
+' msoLineRoundDot     ' round dots
+' msoLineDashDot      ' dash-dot
+' msoLineDashDotDot   ' dash-dot-dot
+' msoLineLongDash
+' msoLineLongDashDot
+
 ' ---------------------------------------------------------------
 Public Sub BuildSensorCatalog()
     Dim n As Long
@@ -24,24 +34,30 @@ Public Sub BuildSensorCatalog()
     ReDim gSensors(0 To 18)   ' room for 19 sensors, 01..19
 
     n = 0
-    AddSensor n, "Boiler", "1", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Unassigned", "2", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.wall", "3", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Freezer", "4", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Blowoff", "5", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Pool.vent", "6", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "ADU.wall", "7", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Fridge", "8", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "SquirrelCage", "9", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.vent", "10", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Pool.feed", "11", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.input", "12", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "KitchenPatio", "13", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "Pool.dump", "14", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B3.feed", "16", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.dump", "17", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.handler", "18", RGB(0, 0, 255), 2, xlSolid
-    AddSensor n, "B1.feed", "19", RGB(0, 0, 255), 2, xlSolid
+    AddSensor n, "Unassigned", "02", clrGray, 1, msoLineSolid
+
+    AddSensor n, "Boiler", "01", clrBlue, 1, msoLineDash
+    AddSensor n, "Blowoff", "05", clrOlive, 1, msoLineDash
+
+    AddSensor n, "B1.input", "12", clrRed, 1, msoLineSolid
+    AddSensor n, "B1.dump", "17", clrGreen, 1, msoLineRoundDot
+    AddSensor n, "B1.feed", "19", clrPurple, 1, msoLineSolid
+    AddSensor n, "B1.handler", "18", clrNavy, 1, msoLineSolid
+    AddSensor n, "B1.vent", "10", clrOrange, 1, msoLineSolid
+    AddSensor n, "B1.wall", "03", clrBlue, 1, msoLineSolid
+
+    AddSensor n, "B3.feed", "16", clrPurple, 1, msoLineSolid
+
+    AddSensor n, "ADU.wall", "07", clrBlue, 1, msoLineSolid
+
+    AddSensor n, "Pool.vent", "06", clrOrange, 1, msoLineSolid
+    AddSensor n, "Pool.feed", "11", clrPurple, 1, msoLineSolid
+    AddSensor n, "Pool.dump", "14", clrGreen, 1, msoLineDash
+
+    AddSensor n, "Freezer", "04", clrPink, 1, msoLineSolid
+    AddSensor n, "Fridge", "08", clrTeal, 1, msoLineSolid
+    AddSensor n, "SquirrelCage", "09", clrRed, 1, msoLineSolid
+    AddSensor n, "KitchenPatio", "13", clrOlive, 1, msoLineSolid
     
     ReDim Preserve gSensors(0 To n - 1)
     gCatalogReady = True
