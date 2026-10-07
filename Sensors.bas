@@ -34,7 +34,6 @@ Public Sub BuildSensorCatalog()
     ReDim gSensors(0 To 18)   ' room for 19 sensors, 01..19
 
     n = 0
-    AddSensor n, "Unassigned", "02", clrGray, 1, msoLineSolid
 
     AddSensor n, "Boiler", "01", clrBlue, 1, msoLineDash
     AddSensor n, "Blowoff", "05", clrOlive, 1, msoLineDash
@@ -48,6 +47,7 @@ Public Sub BuildSensorCatalog()
 
     AddSensor n, "B3.feed", "16", clrPurple, 1, msoLineSolid
 
+    AddSensor n, "ADU.vent", "02", clrOrange, 1, msoLineSolid
     AddSensor n, "ADU.wall", "07", clrBlue, 1, msoLineSolid
 
     AddSensor n, "Pool.vent", "06", clrOrange, 1, msoLineSolid

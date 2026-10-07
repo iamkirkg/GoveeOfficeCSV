@@ -83,8 +83,15 @@ Public Sub WriteGoveeWorkbook(ByVal folderPath As String, ByVal dateToken As Str
         Array("Boiler", "Blowoff", "B1.input", "B1.dump", "B1.feed", "B1.handler", "B1.vent", "B1.wall"), _
         "Main House Sensors", szLog
 
+    Dim wsADU As Worksheet
+    Set wsADU = wb.Worksheets.Add(After:=wsMainHouse)
+    wsADU.Name = "ADU"
+    AddChart wsData, wsADU, dateToken, _
+        Array("Boiler", "Blowoff", "ADU.vent", "ADU.wall"), _
+        "ADU Sensors", szLog
+
     Dim wsPool As Worksheet
-    Set wsPool = wb.Worksheets.Add(After:=wsMainHouse)
+    Set wsPool = wb.Worksheets.Add(After:=wsADU)
     wsPool.Name = "Pool"
     AddChart wsData, wsPool, dateToken, _
         Array("Boiler", "Blowoff", "Pool.vent", "Pool.feed", "Pool.dump"), _
@@ -214,7 +221,7 @@ NextSensor:
     ch.Axes(xlCategory).TickLabels.NumberFormat = "m/d h:mm"
 
     ch.Axes(xlValue).MinimumScale = 50
-    ch.Axes(xlValue).MaximumScale = 130
+    ch.Axes(xlValue).MaximumScale = 140
 
     ch.HasTitle = True
     ch.chartTitle.Text = chartTitle & " : " & targetDate
